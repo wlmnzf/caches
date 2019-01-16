@@ -30,7 +30,7 @@ void print_buf_list(char **buf_list, int s);
 #define L3_CACHE_SIZE (((1 << L3_LINE_WIDTH) << L3_SETS_WIDTH) \
     * L3_ASSOC) // 4 MB total size
 #define L3_2MB_TAG_NB (1 << \
-    (L3_PD_OFFSET_WIDTH - L3_LINE_WIDTH - L3_SETS_WIDTH))
+    (L3_PD_OFFSET_WIDTH - L3_LINE_WIDTH - L3_SETS_WIDTH))  //Tag的数量=8(3bit)
 #define L3_SLICE_WIDTH 2 // Number of L3 cache slices
 #define L3_TOTAL_SET_LINES (L3_ASSOC << L3_SLICE_WIDTH)
 
@@ -103,19 +103,23 @@ int main(int argc, char *argv[]) {
   /**
    * First creating the cache lines
    */
-  printf(" (L3_BUF_SIZE >> L3_PD_OFFSET_WIDTH):%x\n",( (L3_BUF_SIZE >> L3_PD_OFFSET_WIDTH)));
-  // Iterate over the 2 MB pages
+  printf("(L3_BUF_SIZE >> L3_PD_OFFSET_WIDTH):0x%x\n",( (L3_BUF_SIZE >> L3_PD_OFFSET_WIDTH)));//64
+  printf("L3_2MB_TAG_NB:0x%x\n",L3_2MB_TAG_NB);//8
+  // Iterate over the 2 MB pages  
+  //我们申请的buffer中有64页（L3_BUF_SIZE >> L3_PD_OFFSET_WIDTH），每个页有8个Tags
+
   for (p = 0; p < (L3_BUF_SIZE >> L3_PD_OFFSET_WIDTH); p++) {
-    //|32---------------------21|20----17|16------12|11-------6|5--------0|
+    //|32---------------------21|20----18|17------12|11-------6|5--------0|
     //|---------------Frame number------------------|------Page offset----|  4KB Page
     //|----Large frame numer----|-----------Large page offset-------------|  2MB page
     //|---------------TAG----------------|------Set Index----|-Line offset|  Cache Line
-    pa = (uintptr_t)(buf + (p << L3_PD_OFFSET_WIDTH));
+    pa = (uintptr_t)(buf + (p << L3_PD_OFFSET_WIDTH));// pa:Page Address  L3_PD_OFFSET_WIDTH 21bit  large frame number +1
     printf("Page %d, @0x%016lx\n", p, pa);
     // Iterating over available tags in the same 2MB page
+    //8
     for (t = 0; t < L3_2MB_TAG_NB; t++) {
-      ta = pa | (t << (L3_LINE_WIDTH + L3_SETS_WIDTH));
-     printf("Tag (Lines) %d, @0x%016lx\n", t, ta);
+      ta = pa | (t << (L3_LINE_WIDTH + L3_SETS_WIDTH));//tag address
+     printf("Tag (Lines) %d, @0x%016lx\n", t, ta);  //一个sets包含2^6个lines
       // We add the line for the targeted set
       lines[p * L3_2MB_TAG_NB + t] =
           (char *)(ta | (L3_TARGET_SET << L3_LINE_WIDTH));
@@ -153,6 +157,7 @@ int main(int argc, char *argv[]) {
       printf("Add : non conflicting\n");
       cset[css] = lines[l];
       css++;
+      return 0;
     } else {
       printf("Leave : conflicting\n");
     }
@@ -187,6 +192,7 @@ int main(int argc, char *argv[]) {
    */
   for (l = 0; l < mss; l++) {
     fill_buf_list(&buf_list, &cset[0], css);
+    // printf("22222X\n");
     if (probe(buf_list, css, mset[l])) {
       printf("2222222222222222\n");
       ess = 0;
