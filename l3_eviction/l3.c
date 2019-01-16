@@ -23,9 +23,9 @@ void print_buf_list(char **buf_list, int s);
  * /sys/devices/system/cpu/cpu0/cache/index3/
  */
 
-#define L3_LINE_WIDTH 6 // 64 octets
+#define L3_LINE_WIDTH 6 // 64 octets  用octet专指8 bits构成的字节。
 #define L3_SETS_WIDTH 12 // 4096 sets
-#define L3_ASSOC 16 // 16 lines per set
+#define L3_ASSOC 16 // 16 lines per set 16路
 #define L3_RTAG_WIDTH (L3_PD_OFFSET_WIDTH - L3_SETS_WIDTH - L3_LINE_WIDTH)
 #define L3_CACHE_SIZE (((1 << L3_LINE_WIDTH) << L3_SETS_WIDTH) \
     * L3_ASSOC) // 4 MB total size
@@ -75,18 +75,18 @@ int main(int argc, char *argv[]) {
   int css = 0, ess = 0, tss = 0, mss = 0;
   time_t now;
 
-  printf("Processor specification:\n"
-      "  Line width 0x%x\n"
-      "  Sets 0x%x\n"
-      "  Associativity 0x%x\n"
-      "  Total L3 cache size 0x%x\n",
-      L3_LINE_WIDTH, 1 << L3_SETS_WIDTH, L3_ASSOC, L3_CACHE_SIZE);
+  // printf("Processor specification:\n"
+  //     "  Line width 0x%x\n"
+  //     "  Sets 0x%x\n"
+  //     "  Associativity 0x%x\n"
+  //     "  Total L3 cache size 0x%x\n",
+  //     L3_LINE_WIDTH, 1 << L3_SETS_WIDTH, L3_ASSOC, L3_CACHE_SIZE);
 
-  printf("Algorithm parameters:\n"
-      "  Associativity factor 0x%x\n"
-      "  Searching eviction set in 0x%x lines\n"
-      "  Target set 0x%x of 0x%x\n",
-      1 << L3_FACTOR_WIDTH, L3_LINES_NB, L3_TARGET_SET, 1 << L3_SETS_WIDTH);
+  // printf("Algorithm parameters:\n"
+  //     "  Associativity factor 0x%x\n"
+  //     "  Searching eviction set in 0x%x lines\n"
+  //     "  Target set 0x%x of 0x%x\n",
+  //     1 << L3_FACTOR_WIDTH, L3_LINES_NB, L3_TARGET_SET, 1 << L3_SETS_WIDTH);
 
   // Allocation of buffer
   buf = mmap(NULL, L3_BUF_SIZE, PROT_READ | PROT_WRITE, MAP_PRIVATE |
@@ -97,14 +97,14 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
-  printf("Allocated pages @0x%016lx of size 0x%08x\n", (uintptr_t)buf,
-      L3_BUF_SIZE);
+  // printf("Allocated pages @0x%016lx of size 0x%08x\n", (uintptr_t)buf,
+  //     L3_BUF_SIZE);
 
   /**
    * First creating the cache lines
    */
-  printf("(L3_BUF_SIZE >> L3_PD_OFFSET_WIDTH):0x%x\n",( (L3_BUF_SIZE >> L3_PD_OFFSET_WIDTH)));//64
-  printf("L3_2MB_TAG_NB:0x%x\n",L3_2MB_TAG_NB);//8
+  // printf("(L3_BUF_SIZE >> L3_PD_OFFSET_WIDTH):0x%x\n",( (L3_BUF_SIZE >> L3_PD_OFFSET_WIDTH)));//64
+  // printf("L3_2MB_TAG_NB:0x%x\n",L3_2MB_TAG_NB);//8
   // Iterate over the 2 MB pages  
   //我们申请的buffer中有64页（L3_BUF_SIZE >> L3_PD_OFFSET_WIDTH），每个页有8个Tags
 
@@ -114,15 +114,25 @@ int main(int argc, char *argv[]) {
     //|----Large frame numer----|-----------Large page offset-------------|  2MB page
     //|---------------TAG----------------|------Set Index----|-Line offset|  Cache Line
     pa = (uintptr_t)(buf + (p << L3_PD_OFFSET_WIDTH));// pa:Page Address  L3_PD_OFFSET_WIDTH 21bit  large frame number +1
-    printf("Page %d, @0x%016lx\n", p, pa);
+    // printf("Page %d, @0x%016lx\n", p, pa);
     // Iterating over available tags in the same 2MB page
     //8
     for (t = 0; t < L3_2MB_TAG_NB; t++) {
       ta = pa | (t << (L3_LINE_WIDTH + L3_SETS_WIDTH));//tag address
-     printf("Tag (Lines) %d, @0x%016lx\n", t, ta);  //一个sets包含2^6个lines
+     // printf("Tag (Lines) %d, @0x%016lx\n", t, ta);  //两个TAG之间相差2^18个cahce行（对内存而言）
       // We add the line for the targeted set
+      // printf("p * L3_2MB_TAG_NB + t:%d, (char *)(ta | (L3_TARGET_SET << L3_LINE_WIDTH)):0x%x\n",p * L3_2MB_TAG_NB + t, (char *)(ta | (L3_TARGET_SET << L3_LINE_WIDTH)));
+      // printf("(L3_TARGET_SET << L3_LINE_WIDTH):%x\n",(L3_TARGET_SET << L3_LINE_WIDTH));
+      // printf("ta:%x\n",ta);
+      // printf("ta|offset:%x\n",(ta | (L3_TARGET_SET << L3_LINE_WIDTH)));
+      // printf("\n\n");
       lines[p * L3_2MB_TAG_NB + t] =
-          (char *)(ta | (L3_TARGET_SET << L3_LINE_WIDTH));
+          (char *)(ta | (L3_TARGET_SET << L3_LINE_WIDTH));//64*8行，64页，每个页8行
+      
+      // printf("ta|offset:%lx\n",(ta | (L3_TARGET_SET << L3_LINE_WIDTH)));
+      // printf("0x%016lx\n",lines[p * L3_2MB_TAG_NB + t]);
+
+          //|ta|00..00|空出了18个0与L3_TARGET_SET或以后就是set地址，目前不知道L3_TARGET_SET的0x65e是如何得出来的
     }
   }
 
@@ -130,7 +140,7 @@ int main(int argc, char *argv[]) {
    * Displays the generated lines
    */
   for (l = 0; l < L3_LINES_NB; l++) {
-    //printf("Line %d @0x%016lx\n", l, (uintptr_t)lines[l]);
+  //  printf("Line %d @0x%016lx\n", l, (uintptr_t)lines[l]);
   }
 
   /**
@@ -148,8 +158,9 @@ int main(int argc, char *argv[]) {
 //  print_buf_list(buf_list, L3_LINES_NB);
 
   // Step 1 : conflict set
-  for (l = 0; l < L3_LINES_NB; l++) {
-    printf("Line #0x%x\n", l);
+  //L3_Line=512 page 64  每个page 8Line
+  for (l = 0; l < L3_LINES_NB; l++) { //css:conflict set 数量  L3_LINES_NB
+    printf("Line #0x%x  css:%d\n", l,css);
     fill_buf_list(&buf_list, &cset[0], css);
     // print_buf_list(buf_list, css);
     printf("1111111111111111111\n");
@@ -157,7 +168,7 @@ int main(int argc, char *argv[]) {
       printf("Add : non conflicting\n");
       cset[css] = lines[l];
       css++;
-      return 0;
+      // return 0;
     } else {
       printf("Leave : conflicting\n");
     }
@@ -249,7 +260,7 @@ int probe(char **set, int ss, char *candidate) {
   } else {
     return 0;
   }
-  for (i = 0; i < L3_PROBE_PASSES; i++) {
+  for (i = 0; i < L3_PROBE_PASSES; i++) {//16
     if (ss > 0) {
       __asm__ __volatile__("call asm_probe"
           : "=a"(time), "=c"(llp), "=d"(rip) : "a"(set), "b"(ss), "c"(candidate));
