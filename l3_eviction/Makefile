@@ -1,6 +1,6 @@
 CFLAGS:=$(CFLAGS) -g -O0 -Wall # -Werror
-LDFLAGS:=$(LDFLAGS) -g
-OBJS=l3.o asm.o
+LDFLAGS:=$(LDFLAGS) -g -pthread 
+OBJS=l3.o asm.o asm_attack.o asm_prime.o asm_test_prime.o
 CC=gcc
 LD=gcc
 

