@@ -21,7 +21,7 @@
 #include <errno.h>
 #include <stdint.h>
 #include <string.h>
-#include "sqlite3.h"
+//#include "sqlite3.h"
 #define random(x) (rand()%x)
 #pragma comment (lib, "pthreadVC2.lib")
 
@@ -82,7 +82,7 @@ uint8_t array2[256 * 512];
 uint8_t timeTT[256];
 volatile int flag = 0;
 volatile int flag_T = 0;
-sqlite3 *db=NULL;
+//sqlite3 *db=NULL;
 char *zErrMsg =NULL;
 char sql[1000] ;
 
@@ -155,15 +155,15 @@ void probe(int junk, int tries, int results[256]) {
 		{
 
 			results[mix_i]++; /* cache hit - add +1 to score for this value */
-			timeTT[mix_i]=time2;
+//			timeTT[mix_i]=time2;
 		}
 	
 	}
 
-    for(int z=0;z<256;z++)
-	{
-		printf("%d\t%d\n",z,timeTT[z]);
-	}
+  //  for(int z=0;z<256;z++)
+//	{
+//		printf("%d\t%d\n",z,timeTT[z]);
+//	}
 // 	char xx[33];
 //    for(int x=0;x<256;x++)
 //    {
@@ -289,7 +289,7 @@ void readMemoryByte(size_t malicious_x, uint8_t value[2], int score[2]) {
 		if (results[j] >= (2 * results[k] + 5) || (results[j] == 2 && results[k] == 0))
 			break; /* Clear success if best is > 2*runner-up + 5 or 2/0) */
 
-		printf("XXXXX %d\n",j);
+//		printf("XXXXX %d\n",j);
 	}
 	results[0] ^= junk; /* use junk so code above wonat get optimized out*/
 	value[0] = (uint8_t)j;
@@ -332,7 +332,7 @@ int main(int argc, const char **argv) {
 		if (score[1] > 0)
 			printf("(second best: 0x%02X=%c score=%d)", value[1], (value[0] > 31 && value[0] < 127 ? value[0] : '?'), score[1]);
 		printf("\n");
-		return 0;
+	//	return 0;
 	}
 	// sqlite3_close(db);
 	// getchar();
